@@ -138,6 +138,7 @@ queue-clear = Очистить
 queue-empty = Очередь пуста
 queue-similar = Похожие треки
 queue-radio = Автовоспроизведение похожих треков
+queue-return-playing = К текущему треку
 
 # player bar
 player-nothing-playing = Ничего не играет
@@ -196,7 +197,7 @@ login-connect-cookies = Вставить cookie вручную
 login-cookie-open = Открыть YouTube Music
 login-cookie-submit = Продолжить
 login-cookie-hint = Вставьте сюда заголовок запроса Cookie
-login-cookie-step-1 = Откройте music.youtube.com и убедитесь, что вы вошли в аккаунт.
+login-cookie-step-1 = Откройте music.youtube.com и убедитесь, что вы вошли в аккаунт. Лучше всего работает окно в режиме инкогнито.
 login-cookie-step-2 = Нажмите F12, откройте вкладку «Сеть» и перезагрузите страницу.
 login-cookie-step-3 = Выберите любой запрос с именем «browse» или «next».
 login-cookie-step-4 = На вкладке «Заголовки» найдите Cookie в заголовках запроса, щёлкните правой кнопкой и скопируйте значение.

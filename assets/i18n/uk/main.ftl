@@ -72,6 +72,11 @@ app-close-window = Закрити вікно
 app-minimize = Згорнути
 app-zoom = Змінити масштаб
 
+# tray menu
+tray-show = Показати Sonora
+tray-play = Відтворити
+tray-pause = Призупинити
+
 # table columns
 column-played-at = Прослухано
 column-index = #
@@ -90,20 +95,59 @@ column-tracks = Треки
 
 # track menu
 menu-add-to-playlist = Додати до плейлиста
+menu-add-tracks-to-playlist = { $count ->
+    [one] Додати { $count } трек до плейлиста
+    [few] Додати { $count } треки до плейлиста
+   *[other] Додати { $count } треків до плейлиста
+}
 menu-new-playlist = Новий плейлист
 menu-edit-tags = Змінити теги
 menu-no-playlists = Немає плейлистів
 menu-add-to-library = До улюбленого
+menu-add-tracks-to-library = { $count ->
+    [one] Додати { $count } трек до улюбленого
+    [few] Додати { $count } треки до улюбленого
+   *[other] Додати { $count } треків до улюбленого
+}
 menu-remove-from-library = Прибрати з улюбленого
+menu-remove-tracks-from-library = { $count ->
+    [one] Прибрати { $count } трек з улюбленого
+    [few] Прибрати { $count } треки з улюбленого
+   *[other] Прибрати { $count } треків з улюбленого
+}
 menu-remove-from-playlist = Вилучити з плейлиста
+menu-remove-tracks-from-playlist = { $count ->
+    [one] Вилучити { $count } трек з плейлиста
+    [few] Вилучити { $count } треки з плейлиста
+   *[other] Вилучити { $count } треків з плейлиста
+}
 menu-remove-from-history = Вилучити з історії
+menu-remove-tracks-from-history = { $count ->
+    [one] Вилучити { $count } трек з історії
+    [few] Вилучити { $count } треки з історії
+   *[other] Вилучити { $count } треків з історії
+}
 menu-play-next = Відтворити наступним
+menu-play-tracks-next = { $count ->
+    [one] Відтворити { $count } трек наступним
+    [few] Відтворити { $count } треки наступними
+   *[other] Відтворити { $count } треків наступними
+}
 menu-add-to-queue = Додати до черги
+menu-add-tracks-to-queue = { $count ->
+    [one] Додати { $count } трек до черги
+    [few] Додати { $count } треки до черги
+   *[other] Додати { $count } треків до черги
+}
 menu-song-radio = Радіо за треком
 menu-go-to-album = Перейти до альбому
 menu-go-to-artist = Перейти до виконавця
 menu-view-details = Докладніше
 menu-copy-link = Копіювати посилання
+menu-cut = Вирізати
+menu-copy = Скопіювати
+menu-paste = Вставити
+menu-select-all = Вибрати все
 menu-remove-from-queue = Вилучити з черги
 menu-open-playlist = Відкрити плейлист
 menu-play-playlist = Відтворити плейлист
@@ -127,6 +171,41 @@ playlist-again-title = Додати ще раз?
 playlist-again-confirm = Цей трек уже є в «{ $name }». Додати копію?
 playlist-again-add = Додати ще раз
 
+# confirm
+confirm-remove-library-title = Прибрати з медіатеки
+confirm-remove-playlist-title = Вилучити з плейлиста
+confirm-remove-history-title = Вилучити з історії
+confirm-remove-songs = { $count ->
+    [one] Прибрати цей трек з медіатеки?
+    [few] Прибрати { $count } треки з медіатеки?
+   *[other] Прибрати { $count } треків з медіатеки?
+}
+confirm-remove-playlist-songs = { $count ->
+    [one] Вилучити цей трек з плейлиста?
+    [few] Вилучити { $count } треки з плейлиста?
+   *[other] Вилучити { $count } треків з плейлиста?
+}
+confirm-remove-history-songs = { $count ->
+    [one] Вилучити цей трек з історії прослуховувань?
+    [few] Вилучити { $count } треки з історії прослуховувань?
+   *[other] Вилучити { $count } треків з історії прослуховувань?
+}
+confirm-remove-albums = { $count ->
+    [one] Прибрати цей альбом з медіатеки?
+    [few] Прибрати { $count } альбоми з медіатеки?
+   *[other] Прибрати { $count } альбомів з медіатеки?
+}
+confirm-remove-artists = { $count ->
+    [one] Прибрати цього виконавця з улюбленого?
+    [few] Прибрати { $count } виконавців з улюбленого?
+   *[other] Прибрати { $count } виконавців з улюбленого?
+}
+confirm-remove-playlists = { $count ->
+    [one] Прибрати цей плейлист з медіатеки?
+    [few] Прибрати { $count } плейлисти з медіатеки?
+   *[other] Прибрати { $count } плейлистів з медіатеки?
+}
+
 # queue panel
 queue-title = Черга
 queue-history = Історія
@@ -138,6 +217,7 @@ queue-clear = Очистити
 queue-empty = Черга порожня
 queue-similar = Схожі треки
 queue-radio = Автовідтворення схожих треків
+queue-return-playing = До поточного треку
 
 # player bar
 player-nothing-playing = Нічого не грає
@@ -169,6 +249,7 @@ filter-year = Рік
 filter-explicit = Лише з ненормативною лексикою
 filter-playable = Лише доступні
 filter-favorites = Лише улюблене
+filter-owned = Мої
 
 # view
 view-list = Список
@@ -196,7 +277,7 @@ login-connect-cookies = Вставити cookie вручну
 login-cookie-open = Відкрити YouTube Music
 login-cookie-submit = Продовжити
 login-cookie-hint = Вставте сюди заголовок запиту Cookie
-login-cookie-step-1 = Відкрийте music.youtube.com і переконайтеся, що ви увійшли в акаунт.
+login-cookie-step-1 = Відкрийте music.youtube.com і переконайтеся, що ви увійшли в акаунт. Найкраще працює вікно анонімного перегляду.
 login-cookie-step-2 = Натисніть F12, відкрийте вкладку «Мережа» та перезавантажте сторінку.
 login-cookie-step-3 = Виберіть будь-який запит з назвою «browse» або «next».
 login-cookie-step-4 = На вкладці «Заголовки» знайдіть Cookie серед заголовків запиту, клацніть правою кнопкою та скопіюйте значення.
@@ -445,10 +526,27 @@ settings-window-rounding = Скруглення вікна
 settings-window-rounding-detail = Наскільки заокруглені кути вікна
 settings-controls-side = Сторона кнопок
 settings-controls-side-detail = З якого боку заголовка розташовані кнопки
+settings-close-to-tray = Продовжувати відтворення після закриття
+settings-close-to-tray-detail = Залишає Sonora в області сповіщень та продовжує відтворення після закриття вікна
+settings-discord = Показувати в Discord
+settings-discord-detail = Показує трек, який ви слухаєте, у вашому профілі Discord
+settings-discord-name = Назва статусу
+settings-discord-name-detail = Як зветься статус після «Слухає», який бачать друзі
+settings-discord-name-sonora = Sonora
+settings-discord-name-provider = Сервіс
+settings-discord-name-music = Музика
+settings-discord-badge = Показувати значок сервісу
+settings-discord-badge-detail = Позначає статус невеликою іконкою сервісу, з якого грає трек
+settings-discord-anonymous = Приховати подробиці
+settings-discord-anonymous-detail = Повідомляє лише те, що грає музика, без назви, виконавця й обкладинки
+# the Discord status when the track is left out of it
+discord-listening = Слухає музику
 settings-normalisation = Нормалізація гучності
 settings-normalisation-detail = Тримає треки на однаковій гучності
 settings-gapless = Відтворення без пауз
 settings-gapless-detail = Переводить трек у наступний без паузи, як задумано в альбомі
+settings-sleep = Таймер сну
+settings-sleep-detail = Музика зупиниться сама через заданий час, щоб ви могли заснути під неї
 settings-sleep-configure = Налаштувати…
 settings-sleep-off = Вимк
 settings-sleep-end-of-track = Наприкінці треку
@@ -458,8 +556,12 @@ settings-panel-lyrics-size-detail = Розмір рядків тексту пі�
 settings-fullscreen-lyrics-size = Розмір тексту пісні (повний екран)
 settings-fullscreen-lyrics-size-detail = Розмір рядків тексту пісні в повноекранному плеєрі поверх базового розміру шрифту
 settings-lyrics-size-value = { $size } %
+settings-lyrics-for-local-files = Текст для локальних файлів
+settings-lyrics-for-local-files-detail = Використовує метадані локальних файлів, щоб знайти текст в інтернеті
 settings-karaoke-lyrics = Караоке-текст
 settings-karaoke-lyrics-detail = Підсвічувати текст слово за словом, коли є тайминги
+settings-blur-lyrics = Розмивати неактивний текст
+settings-blur-lyrics-detail = Розмиває попередні та наступні рядки на панелі тексту
 settings-romanized-lyrics = Романізація тексту
 settings-romanized-lyrics-detail = Показувати локально зібрану вимову для вибраних систем письма
 settings-romanization-writing-systems = Системи письма
@@ -471,6 +573,7 @@ settings-romanization-greek = Грецьке письмо
 settings-romanization-arabic = Арабське письмо
 settings-romanization-other = Інші системи письма
 settings-advanced = Додатково
+settings-group-window = Вікно
 settings-group-accounts = Акаунти
 settings-group-library = Медіатека
 settings-group-text = Текст
@@ -478,6 +581,7 @@ settings-group-motion = Анімація
 settings-group-title-bar = Заголовок вікна
 settings-group-window-style = Стиль вікна
 settings-group-lyrics = Текст пісні
+settings-group-discord = Discord
 settings-group-project = Проєкт
 settings-adaptive-menu = Адаптивне контекстне меню
 settings-adaptive-menu-detail = Прибирає пункти, які вже видно в рядку, — наприклад альбом чи виконавця

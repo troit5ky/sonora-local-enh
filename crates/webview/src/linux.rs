@@ -92,6 +92,9 @@ macro_rules! symbols {
 }
 
 symbols! {
+    gdk_set_allowed_backends: unsafe extern "C" fn(*const c_char),
+    gdk_display_get_default: unsafe extern "C" fn() -> Ptr,
+    g_type_name_from_instance: unsafe extern "C" fn(Ptr) -> *const c_char,
     gtk_disable_setlocale: unsafe extern "C" fn(),
     gtk_init_check: unsafe extern "C" fn(*mut c_int, *mut *mut *mut c_char) -> Bool,
     gtk_main: unsafe extern "C" fn(),
@@ -485,10 +488,31 @@ fn gtk(api: &'static Api) -> &'static Host {
 /// Initialises GTK, then alternates between parking and running a main loop for as long as there
 /// are windows. Never returns unless GTK itself refuses to start.
 fn run(api: &'static Api, host: &'static Host) {
+    // GDK opens its own connection to whichever server it finds, Wayland first and X11 through
+    // XWayland otherwise, so the sign-in window never depends on an XWayland being present. A
+    // GDK_BACKEND in the environment outranks this list, which is fine: either name works.
+    unsafe { (api.gdk_set_allowed_backends)(c"wayland,x11".as_ptr()) };
     // gtk_init would otherwise move the whole process onto the user's locale.
     unsafe { (api.gtk_disable_setlocale)() };
     if unsafe { (api.gtk_init_check)(ptr::null_mut(), ptr::null_mut()) } == 0 {
         return host.fail("cannot reach the display server".to_string());
+    }
+    // SAFETY: the display GTK just opened outlives the thread, and its type name is static.
+    let backend = unsafe {
+        let display = (api.gdk_display_get_default)();
+        match display.is_null() {
+            true => String::new(),
+            false => CStr::from_ptr((api.g_type_name_from_instance)(display))
+                .to_string_lossy()
+                .into_owned(),
+        }
+    };
+    log::debug!("webview: gdk opened {backend}");
+    // On X11 WebKit tries to share a GL context with the main process and paints nothing; the
+    // compositing env var has no public setting equivalent. Wayland needs the compositor on.
+    // SAFETY: nothing else in the process reads this variable.
+    if backend == "GdkX11Display" {
+        unsafe { std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1") };
     }
     host.running();
     loop {

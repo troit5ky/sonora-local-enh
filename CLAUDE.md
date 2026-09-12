@@ -476,9 +476,12 @@ Rules:
   panel's size is ever a function of the other's.
 - **Hiding is a different question from sizing, and it does look at both panels.** `SidebarLeft`
   auto-hides once the room left for content — viewport minus its own width _and_
-  `Chrome::sidebar_right` — drops below `Room::Wide`, so opening the queue pushes it out of the way
-  without resizing it. It reads last frame's publish, which cannot loop: the decision changes
-  visibility, never width. `SidebarRight` decides its own takeover from the viewport alone.
+  the right sidebar's width — drops below `Room::Wide`, so opening the queue pushes it out of the way
+  without resizing it. `Workspace` hands `SidebarLeft::adapt` this frame's right width before it
+  lays anything out, and a flip calls `cx.refresh_windows()`, which lands once the draw is over. A
+  `cx.notify()` raised inside a render schedules nothing in GPUI, so anything less waits for
+  whatever redraw comes along. It cannot loop: the decision changes visibility, never width, and
+  the refresh fires only on a flip. `SidebarRight` decides its own takeover from the viewport alone.
   Toggling a hidden `SidebarLeft` back on while the window is that narrow overlays it at the width
   the user last chose, so its drag ceiling then comes from the viewport alone — an overlay takes no
   content space, so capping it against content room would only disable resizing.
