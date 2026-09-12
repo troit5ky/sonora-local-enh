@@ -453,9 +453,8 @@ impl MusicApi for LocalClient {
         let path = wire::path_from_track_id(track_id)
             .ok_or_else(|| anyhow!("{track_id} is not a local track id"))?;
 
-        std::fs::remove_file(path).with_context(|| format!("cannot delete {}", path.display()))?;
-
         self.store.set_starred(Starred::Tracks, track_id, false)?;
+        std::fs::remove_file(path).with_context(|| format!("cannot delete {}", path.display()))?;
         Ok(())
     }
 }
