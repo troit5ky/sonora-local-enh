@@ -31,24 +31,38 @@ use crate::{Repeat, Sonora};
 
 /// Which panel the right sidebar shows.
 /// What the Discord status calls itself. `Provider` asks the provider the track came from, so
-/// local files say Local Music rather than the provider's own name.
+/// local files say Local Music rather than the provider's own name. `ArtistTitle` shows as
+/// "Artist - Title".
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum DiscordName {
     #[default]
     Sonora,
     Provider,
     Music,
+    Title,
+    Artist,
+    ArtistTitle,
 }
 
 impl DiscordName {
-    pub const ALL: [Self; 3] = [Self::Sonora, Self::Provider, Self::Music];
+    pub const ALL: [Self; 6] = [
+        Self::Sonora,
+        Self::Provider,
+        Self::Music,
+        Self::Title,
+        Self::Artist,
+        Self::ArtistTitle,
+    ];
 
     pub fn id(self) -> &'static str {
         match self {
             Self::Sonora => "sonora",
             Self::Provider => "provider",
             Self::Music => "music",
+            Self::Title => "title",
+            Self::Artist => "artist",
+            Self::ArtistTitle => "artist-title",
         }
     }
 
@@ -57,6 +71,9 @@ impl DiscordName {
             Self::Sonora => "settings-discord-name-sonora",
             Self::Provider => "settings-discord-name-provider",
             Self::Music => "settings-discord-name-music",
+            Self::Title => "settings-discord-name-title",
+            Self::Artist => "settings-discord-name-artist",
+            Self::ArtistTitle => "settings-discord-name-artist-title",
         }
     }
 
@@ -214,6 +231,7 @@ struct Values {
     sleep_timer: bool,
     discord_presence: bool,
     discord_name: DiscordName,
+    discord_show_paused: bool,
     discord_badge: bool,
     discord_without_details: bool,
     lyrics_for_local_files: bool,
@@ -279,6 +297,7 @@ impl Default for Values {
             sleep_timer: false,
             discord_presence: false,
             discord_name: DiscordName::Sonora,
+            discord_show_paused: false,
             discord_badge: false,
             discord_without_details: false,
             lyrics_for_local_files: true,
@@ -521,6 +540,11 @@ impl AppSettings {
     /// What the Discord status names itself after "listening to".
     pub fn discord_name(&self) -> DiscordName {
         self.values.discord_name
+    }
+
+    /// Whether the Discord status stays up while the track is paused.
+    pub fn discord_show_paused(&self) -> bool {
+        self.values.discord_show_paused
     }
 
     /// Whether the Discord status carries the badge of the provider the track came from.
@@ -777,6 +801,11 @@ impl AppSettings {
 
     pub fn set_discord_name(&mut self, name: DiscordName, cx: &mut Context<Self>) {
         self.values.discord_name = name;
+        self.schedule_save(cx);
+    }
+
+    pub fn set_discord_show_paused(&mut self, enabled: bool, cx: &mut Context<Self>) {
+        self.values.discord_show_paused = enabled;
         self.schedule_save(cx);
     }
 

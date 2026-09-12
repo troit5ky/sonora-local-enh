@@ -7,11 +7,58 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.34.4] - 2026-09-12
+
+### Changed
+
+- Updated and completed the Indonesian translation.
+- Song lengths in tables and track lists use equal-width digits, so the column lines up.
+- Settings offers Paste cookies manually for YouTube Music beside the browser sign-in, so an
+  account can be connected that way without first removing every other provider.
+
+### Fixed
+
+- The left sidebar stays smooth with a long Pinned section or Show full library on. It used to
+  build every entry on every frame, even the ones scrolled out of view. Now it draws only the rows
+  on screen and rebuilds the list only when something in it changes.
+- On Nix, the YouTube Music sign-in no longer goes black after the email step. The package now
+  gives WebKit the GStreamer plugins it needs to play a page's media.
+- On Windows, the sign-in window opens when Sonora is installed under Program Files. It used to
+  fail with `0x80070005` because the browser it embeds tried to keep its data next to the program,
+  where a normal user cannot write. That data now lives under your local app data.
+- In the fullscreen view, the volume slider is no longer cut off when you hover the speaker button
+  while the controls are still sliding in.
+
+## [0.34.3] - 2026-09-12
+
+### Fixed
+
+- The cookie sign-in window opens natively on Wayland and no longer needs XWayland. It also opens
+  on desktops that export `GDK_BACKEND=wayland`, which used to fail with "cannot reach the display
+  server".
+- The Nix package can open the sign-in window: it now ships webkitgtk and the TLS module the page
+  needs, instead of reporting that webkit2gtk is not installed.
+- The left sidebar steps aside on the same frame the queue opens or closes, instead of waiting for
+  the next redraw.
+
+## [0.34.2] - 2026-09-12
+
+### Added
+
+- You can choose to show the track's artist, title, or both as the Discord status name, in addition
+  to Sonora, Provider, and Music.
+
+- Discord status can be configured to stay or hide when the track is paused.
+
 ### Fixed
 
 - The Motion setting's System option now follows the operating system's reduced-motion preference
   on Linux, macOS and Windows, refreshing when Sonora comes back to the foreground. Older Linux
   portals that do not expose the standardized setting safely keep normal animations.
+- Local M4A files show their embedded cover art.
+- On Linux under Wayland, the cookie sign-in window draws its page instead of staying blank.
+- The arrow that floats over a scrolled queue brings the now-playing track back into view
+  instead of jumping to the top of the history. It only goes to the top when nothing is playing.
 
 ## [0.34.1] - 2026-09-11
 
@@ -1487,7 +1534,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.1...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.4...HEAD
+[0.34.4]: https://github.com/sonorahq/sonora/compare/v0.34.3...v0.34.4
+[0.34.3]: https://github.com/sonorahq/sonora/compare/v0.34.2...v0.34.3
+[0.34.2]: https://github.com/sonorahq/sonora/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/sonorahq/sonora/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/sonorahq/sonora/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/sonorahq/sonora/compare/v0.32.0...v0.33.0

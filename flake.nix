@@ -37,19 +37,19 @@
         );
 
       release = {
-        version = "0.34.0";
+        version = "0.34.4";
         assets = {
           x86_64-linux = {
             target = "x86_64-unknown-linux-gnu";
-            hash = "sha256-Q8f+x84FGz2sXyTazxs2sbtOk1fqj6QgymELYpU0+Jo=";
+            hash = "sha256-sBtr/gryOBpDu95LsiguJPof8Ieq4l/2f8/z0vRGGtE=";
           };
           aarch64-linux = {
             target = "aarch64-unknown-linux-gnu";
-            hash = "sha256-NgLOHrSbYbBIa1pTFuymIuijq4LA9AL1tB0LHEzcVTQ=";
+            hash = "sha256-n0fScf1WlozdCd+ek8iEBMEpTI85dke33ydwkz5UFv0=";
           };
           aarch64-darwin = {
             target = "macos";
-            hash = "sha256-KgGT1B/Dykq3ozBKElPcRihfC8AgiGpVWdrXThiIxLE=";
+            hash = "sha256-WhHVc926WOqVQnC48qEb5sA1VvHR9tZvR5DHjlN86zM=";
           };
         };
       };
@@ -74,11 +74,25 @@
                 alsa-lib
                 dbus
                 sqlite
+                webkitgtk_4_1
+                glib-networking
               ]
             else
               [ ];
 
           asset = release.assets.${pkgs.stdenv.hostPlatform.system};
+
+          # WebKit plays a page's media through GStreamer and aborts its web process when no
+          # audio sink element exists. The Nix webkitgtk closure carries only core and base, and
+          # autoaudiosink lives in good, so the plugin path has to name all three.
+          gstPluginPath = pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (
+            with pkgs.gst_all_1;
+            [
+              gstreamer
+              gst-plugins-base
+              gst-plugins-good
+            ]
+          );
 
           alsaPluginDirectory = pkgs.symlinkJoin {
             name = "sonora-alsa-plugins";
@@ -156,7 +170,9 @@
                 --add-rpath "${pkgs.lib.makeLibraryPath (runtimeLibraries ++ [ pkgs.stdenv.cc.cc.lib ])}" \
                 "$out/bin/sonora"
               wrapProgram "$out/bin/sonora" \
-                --set ALSA_PLUGIN_DIR ${alsaPluginDirectory}
+                --set ALSA_PLUGIN_DIR ${alsaPluginDirectory} \
+                --prefix GIO_EXTRA_MODULES : ${pkgs.glib-networking}/lib/gio/modules \
+                --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : ${gstPluginPath}
             '';
 
             meta = {
@@ -199,6 +215,9 @@
                 alsa-lib
                 dbus
                 sqlite
+                openssl
+                webkitgtk_4_1
+                glib-networking
               ]
             else
               [ ];
@@ -238,11 +257,26 @@
                 "";
 
             shellHook =
+              # WebKit composites through EGL, which has to find the same drivers.
               pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                 if [ ! -d /run/opengl-driver ]; then
                   export VK_DRIVER_FILES="${pkgs.mesa}/share/vulkan/icd.d"
                   export VK_IMPLICIT_LAYER_PATH="${pkgs.mesa}/share/vulkan/implicit_layer.d"
+                  export __EGL_VENDOR_LIBRARY_DIRS="${pkgs.mesa}/share/glvnd/egl_vendor.d"
+                  export LIBGL_DRIVERS_PATH="${pkgs.mesa}/lib/dri"
+                  export GBM_BACKENDS_PATH="${pkgs.mesa}/lib/gbm"
                 fi
+                export GIO_EXTRA_MODULES="${pkgs.glib-networking}/lib/gio/modules''${GIO_EXTRA_MODULES:+:$GIO_EXTRA_MODULES}"
+                export GST_PLUGIN_SYSTEM_PATH_1_0="${
+                  pkgs.lib.makeSearchPathOutput "lib" "lib/gstreamer-1.0" (
+                    with pkgs.gst_all_1;
+                    [
+                      gstreamer
+                      gst-plugins-base
+                      gst-plugins-good
+                    ]
+                  )
+                }''${GST_PLUGIN_SYSTEM_PATH_1_0:+:$GST_PLUGIN_SYSTEM_PATH_1_0}"
               ''
               # gpui_apple compiles its shaders with `xcrun -sdk macosx metal` at build
               # time. The Nix Apple SDK has no Metal toolchain, so hand xcrun back to the
