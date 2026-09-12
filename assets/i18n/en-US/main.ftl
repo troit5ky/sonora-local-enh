@@ -631,6 +631,7 @@ saver-strong = Strong ({ $fps } FPS)
 toast-playlist-created = Playlist created
 toast-playlist-renamed = Playlist renamed
 toast-playlist-deleted = Playlist deleted
+toast-local-delete-failed = Some track files could not be deleted
 toast-playlist-added = Playlist added to your library
 toast-playlist-removed = Playlist removed from your library
 toast-playlist-visibility = Playlist visibility changed
