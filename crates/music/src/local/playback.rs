@@ -6,7 +6,7 @@ use rodio::Source as _;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
 use super::wire;
-use crate::audio::{Output, Volume};
+use crate::audio::{Chain, Output, Volume};
 use crate::spectrum::Spectrum;
 use crate::{PlaybackConfig, PlaybackEvent, PlaybackEvents, PlaybackFactory, Player};
 
@@ -148,7 +148,12 @@ async fn engine_loop(
     events: UnboundedSender<PlaybackEvent>,
     spectrum: Spectrum,
 ) {
-    let output = match Output::open(Volume::new(config.gain), spectrum) {
+    let chain = Chain {
+        volume: Volume::new(config.gain),
+        equalizer: config.equalizer.clone(),
+        spectrum,
+    };
+    let output = match Output::open(chain) {
         Ok(output) => output,
         Err(error) => {
             log::error!("playback: cannot open audio output: {error:#}");
@@ -358,11 +363,14 @@ fn load(sink: &rodio::Player, id: &str) -> Result<Slot> {
         use std::io::{Seek, SeekFrom};
         let _ = file.seek(SeekFrom::Start(skip));
     }
+    let gapless = !wire::has_lying_xing_frame_count(path, skip);
     let reader = std::io::BufReader::new(file);
 
     let mut builder = rodio::Decoder::builder()
         .with_data(reader)
-        .with_seekable(true);
+        .with_seekable(true)
+        .with_gapless(gapless);
+
     if let Some(length) = length {
         builder = builder.with_byte_len(length.saturating_sub(skip));
     }

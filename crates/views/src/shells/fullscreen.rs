@@ -12,7 +12,7 @@ use gpui::{Window, canvas, deferred, div, px, relative};
 use i18n::t;
 use input::{ToggleFullscreen, WORKSPACE_CONTEXT};
 use router::{Destination, navigate};
-use state::{AppSettings, Cover, Playback, Queue, SideTab, Sonora};
+use state::{AppSettings, Cover, FullscreenControlsAutohide, Playback, Queue, SideTab, Sonora};
 use ui::{
     ActiveTheme as _, Artwork, Button, ExplicitBadge, InlineLink, InlineLinks, Motion,
     Motioned as _, Popup, Room, Scrollbar, Scrubber, ScrubberState, Springs, Text, Visualizer,
@@ -204,11 +204,15 @@ impl FullscreenView {
         self.spring_beat = Instant::now();
     }
 
+    /// Steps the idle spring and answers how far the view has sunk toward rest, 0 awake to
+    /// 1 asleep. It follows the pointer alone and never the visibility setting, so the leave
+    /// button can ride it whatever the setting says about the controls.
     fn hidden(&mut self, window: &mut Window, cx: &App) -> f32 {
         let target = match self.awake {
             true => 0.,
             false => 1.,
         };
+
         if cx.reduce_motion() {
             self.hidden = SpringState {
                 position: target,
@@ -854,13 +858,45 @@ impl FullscreenView {
         )
     }
 
-    fn leave(&self) -> Button {
-        Button::new("leave-fullscreen")
-            .ghost()
-            .small()
-            .icon("icons/chevron-down.svg")
-            .tooltip_above("player-fullscreen-leave")
-            .on_click(|_, window, cx| window.dispatch_action(Box::new(ToggleFullscreen), cx))
+    /// The leave button in the bottom right corner. It sinks and fades with the idle spring
+    /// rather than with the controls, so a pointer move still brings it back when the controls
+    /// are set to stay hidden. The compact spacer applies only while a player bar is there to
+    /// line up with.
+    fn leave(
+        &self,
+        idle: f32,
+        bar: bool,
+        room: Room,
+        window: &Window,
+        cx: &App,
+    ) -> impl IntoElement {
+        let theme = *cx.theme();
+
+        div()
+            .absolute()
+            .bottom(px(SINK) * -idle)
+            .right_5()
+            .h(PlayerBar::height(window, cx))
+            .flex()
+            .flex_col()
+            .justify_center()
+            .when(bar && !room.fits(Room::Roomy), |this| {
+                // Match the second row of the compact player bar.
+                this.py_2()
+                    .gap_2()
+                    .child(div().h(snapped(theme.metrics.row, window)).flex_none())
+            })
+            .opacity(1. - idle)
+            .child(
+                Button::new("leave-fullscreen")
+                    .ghost()
+                    .small()
+                    .icon("icons/chevron-down.svg")
+                    .tooltip_above("player-fullscreen-leave")
+                    .on_click(|_, window, cx| {
+                        window.dispatch_action(Box::new(ToggleFullscreen), cx)
+                    }),
+            )
     }
 }
 
@@ -887,7 +923,12 @@ impl Render for FullscreenView {
         let viewport = window.viewport_size();
         let room = Room::of(viewport.width);
         let split = room.fits(Room::Wide) && self.panel.is_some();
-        let hide = self.hidden(window, cx);
+        let idle = self.hidden(window, cx);
+        let hide = match self.settings.read(cx).fullscreen_controls_autohide() {
+            FullscreenControlsAutohide::Automatic => idle,
+            FullscreenControlsAutohide::AlwaysShown => 0.,
+            FullscreenControlsAutohide::AlwaysHidden => 1.,
+        };
         let shown = hide < 1.;
         let (tall, wide, ceiling, tall_rest, wide_rest, ceiling_rest) = match room.fits(Room::Wide)
         {
@@ -1023,25 +1064,8 @@ impl Render for FullscreenView {
             .when(!split, |this| {
                 this.child(self.dock(theme.metrics.player_bar * DOCK_FULL, hide, cx))
             })
-            .when(shown, |this| {
-                this.child(
-                    div()
-                        .absolute()
-                        .bottom(px(SINK) * -hide)
-                        .right_5()
-                        .h(PlayerBar::height(window, cx))
-                        .flex()
-                        .flex_col()
-                        .justify_center()
-                        .when(!room.fits(Room::Roomy), |this| {
-                            // Match the second row of the compact player bar.
-                            this.py_2()
-                                .gap_2()
-                                .child(div().h(snapped(theme.metrics.row, window)).flex_none())
-                        })
-                        .opacity(1. - hide)
-                        .child(self.leave()),
-                )
+            .when(idle < 1., |this| {
+                this.child(self.leave(idle, shown, room, window, cx))
             })
             .children(self.menu(cx))
     }

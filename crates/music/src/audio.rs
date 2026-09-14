@@ -8,6 +8,7 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use rodio::source::SeekError;
 use rodio::{DeviceSinkBuilder, MixerDeviceSink, Source};
 
+use crate::equalizer::{Equalized, Equalizer};
 use crate::spectrum::{Spectrum, Tap};
 
 pub const RAMP: Duration = Duration::from_millis(25);
@@ -30,6 +31,14 @@ impl Volume {
     }
 }
 
+/// What sits between the queue and the device: the equalizer, then the volume ramp, with the
+/// spectrum tap listening at the end. Every engine builds one and hands it to the output.
+pub struct Chain {
+    pub volume: Volume,
+    pub equalizer: Equalizer,
+    pub spectrum: Spectrum,
+}
+
 pub struct Output {
     sink: Arc<rodio::Player>,
     volume: Volume,
@@ -39,7 +48,14 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn open(volume: Volume, spectrum: Spectrum) -> Result<Self> {
+    /// Claims the default output device and runs every sample through the equalizer and then
+    /// the volume ramp before it reaches the mixer.
+    pub fn open(chain: Chain) -> Result<Self> {
+        let Chain {
+            volume,
+            equalizer,
+            spectrum,
+        } = chain;
         let host = cpal::default_host();
         let device = host
             .default_output_device()
@@ -82,9 +98,10 @@ impl Output {
         let applied = volume.get();
         let tap = spectrum.attach(default.sample_rate(), default.channels());
         let (sink, source) = rodio::Player::new();
+        let equalized = Equalized::new(source, equalizer);
         stream
             .mixer()
-            .add(SmoothGain::new(source, volume.clone(), applied, RAMP).with_tap(tap));
+            .add(SmoothGain::new(equalized, volume.clone(), applied, RAMP).with_tap(tap));
 
         Ok(Self {
             sink: Arc::new(sink),

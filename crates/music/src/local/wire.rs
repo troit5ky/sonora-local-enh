@@ -97,6 +97,37 @@ pub fn id3v2_end(path: &Path) -> u64 {
     skip
 }
 
+/// True when the first MPEG frame past `skip` carries a Xing/Info VBR header whose declared
+/// frame count is `0` instead of omitted
+pub fn has_lying_xing_frame_count(path: &Path, skip: u64) -> bool {
+    use std::io::{Read, Seek, SeekFrom};
+
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    if skip > 0 && file.seek(SeekFrom::Start(skip)).is_err() {
+        return false;
+    }
+
+    let mut head = [0u8; 64];
+    let Ok(read) = file.read(&mut head) else {
+        return false;
+    };
+    let head = &head[..read];
+
+    [b"Xing".as_slice(), b"Info".as_slice()]
+        .into_iter()
+        .filter_map(|marker| head.windows(4).position(|window| window == marker))
+        .any(|pos| {
+            let flags = head.get(pos + 4..pos + 8);
+            let has_frame_count = flags.is_some_and(|flags| flags[3] & 0x1 != 0);
+            let count = has_frame_count
+                .then(|| head.get(pos + 8..pos + 12))
+                .flatten();
+            count.is_some_and(|bytes| bytes == [0, 0, 0, 0])
+        })
+}
+
 pub fn album_id(artist: &str, name: &str) -> String {
     let mut hasher = DefaultHasher::new();
     normalize(artist).hash(&mut hasher);

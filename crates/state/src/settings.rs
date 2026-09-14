@@ -18,6 +18,7 @@ use gpui::{
     px, size,
 };
 use music::WritingSystem;
+use music::equalizer::{self, Gains};
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use storage::Database;
@@ -79,6 +80,44 @@ impl DiscordName {
 
     pub fn from_id(id: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|name| name.id() == id)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum FullscreenControlsAutohide {
+    #[default]
+    Automatic,
+    AlwaysShown,
+    AlwaysHidden,
+}
+
+impl FullscreenControlsAutohide {
+    pub const ALL: [Self; 3] = [Self::Automatic, Self::AlwaysShown, Self::AlwaysHidden];
+
+    pub fn id(self) -> &'static str {
+        match self {
+            Self::Automatic => "automatic",
+            Self::AlwaysHidden => "always-hidden",
+            Self::AlwaysShown => "always-shown",
+        }
+    }
+
+    pub fn from_id(id: &str) -> Self {
+        match id {
+            "automatic" => Self::Automatic,
+            "always-hidden" => Self::AlwaysHidden,
+            "always-shown" => Self::AlwaysShown,
+            _ => Self::Automatic,
+        }
+    }
+
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Automatic => "settings-fullscreen-controls-autohide-automatic",
+            Self::AlwaysHidden => "settings-fullscreen-controls-autohide-always-hidden",
+            Self::AlwaysShown => "settings-fullscreen-controls-autohide-always-shown",
+        }
     }
 }
 
@@ -228,6 +267,10 @@ struct Values {
     version: u32,
     normalisation: bool,
     gapless: bool,
+    equalizer: bool,
+    /// Per band gains in decibels, lowest band first. Kept even while `equalizer` is off, so
+    /// turning it back on restores the curve.
+    equalizer_bands: Vec<f32>,
     sleep_timer: bool,
     discord_presence: bool,
     discord_name: DiscordName,
@@ -286,6 +329,7 @@ struct Appearance {
     motion_pace: String,
     battery_saver: String,
     theme_overrides: ThemeOverrides,
+    fullscreen_controls_autohide: String,
 }
 
 impl Default for Values {
@@ -294,6 +338,8 @@ impl Default for Values {
             version: SETTINGS_VERSION,
             normalisation: false,
             gapless: true,
+            equalizer: false,
+            equalizer_bands: vec![0.; equalizer::BANDS],
             sleep_timer: false,
             discord_presence: false,
             discord_name: DiscordName::Sonora,
@@ -444,6 +490,7 @@ impl Default for Appearance {
             motion_pace: Pace::default().id().to_owned(),
             battery_saver: Saver::default().id().to_owned(),
             theme_overrides: ThemeOverrides::default(),
+            fullscreen_controls_autohide: FullscreenControlsAutohide::Automatic.id().to_owned(),
         }
     }
 }
@@ -526,6 +573,18 @@ impl AppSettings {
 
     pub fn gapless(&self) -> bool {
         self.values.gapless
+    }
+
+    pub fn equalizer(&self) -> bool {
+        self.values.equalizer
+    }
+
+    /// The stored curve, padded flat or cut to the band count and clamped into range, so a file
+    /// written by another version still loads.
+    pub fn equalizer_gains(&self) -> Gains {
+        let stored = &self.values.equalizer_bands;
+        let gains = std::array::from_fn(|band| stored.get(band).copied().unwrap_or(0.));
+        equalizer::clamped(&gains)
     }
 
     pub fn sleep_timer(&self) -> bool {
@@ -665,6 +724,10 @@ impl AppSettings {
         self.values.appearance.visualizer
     }
 
+    pub fn fullscreen_controls_autohide(&self) -> FullscreenControlsAutohide {
+        FullscreenControlsAutohide::from_id(&self.values.appearance.fullscreen_controls_autohide)
+    }
+
     pub fn icons(&self) -> &str {
         &self.values.appearance.icons
     }
@@ -789,6 +852,16 @@ impl AppSettings {
         self.schedule_save(cx);
     }
 
+    pub fn set_equalizer(&mut self, on: bool, cx: &mut Context<Self>) {
+        self.values.equalizer = on;
+        self.schedule_save(cx);
+    }
+
+    pub fn set_equalizer_gains(&mut self, gains: &Gains, cx: &mut Context<Self>) {
+        self.values.equalizer_bands = equalizer::clamped(gains).to_vec();
+        self.schedule_save(cx);
+    }
+
     pub fn set_sleep_timer(&mut self, sleep_timer: bool, cx: &mut Context<Self>) {
         self.values.sleep_timer = sleep_timer;
         self.schedule_save(cx);
@@ -801,6 +874,15 @@ impl AppSettings {
 
     pub fn set_discord_name(&mut self, name: DiscordName, cx: &mut Context<Self>) {
         self.values.discord_name = name;
+        self.schedule_save(cx);
+    }
+
+    pub fn set_fullscreen_controls_autohide(
+        &mut self,
+        fca: FullscreenControlsAutohide,
+        cx: &mut Context<Self>,
+    ) {
+        self.values.appearance.fullscreen_controls_autohide = fca.id().to_owned();
         self.schedule_save(cx);
     }
 

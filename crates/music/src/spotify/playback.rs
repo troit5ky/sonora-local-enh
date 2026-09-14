@@ -9,7 +9,7 @@ use librespot_playback::mixer::NoOpVolume;
 use librespot_playback::player::{Player, PlayerEvent};
 use tokio::sync::mpsc::{UnboundedReceiver, unbounded_channel};
 
-use crate::audio::Volume;
+use crate::audio::{Chain, Volume};
 use crate::sink::Cue;
 use crate::spectrum::Spectrum;
 use crate::spotify::sink::OutputSink;
@@ -127,12 +127,15 @@ impl Engine {
             ..Default::default()
         };
 
-        let sink_volume = volume.clone();
         let sink_cue = cue.clone();
-        let sink_spectrum = spectrum.clone();
+        let chain = Chain {
+            volume: volume.clone(),
+            equalizer: config.equalizer.clone(),
+            spectrum: spectrum.clone(),
+        };
         let (output_tx, output_rx) = unbounded_channel();
         let player = Player::new(player_config, session, Box::new(NoOpVolume), move || {
-            OutputSink::boxed(sink_cue, sink_volume, sink_spectrum, output_tx.clone())
+            OutputSink::boxed(sink_cue, chain, output_tx.clone())
         });
 
         let events = Events {

@@ -7,9 +7,8 @@ use librespot_playback::decoder::AudioPacket;
 use librespot_playback::{NUM_CHANNELS, SAMPLE_RATE};
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::audio::Volume;
+use crate::audio::Chain;
 use crate::sink::{Cue, Paced, packet};
-use crate::spectrum::Spectrum;
 
 pub struct OutputSink {
     paced: Paced,
@@ -18,13 +17,8 @@ pub struct OutputSink {
 impl OutputSink {
     /// The sink librespot's player builder asks for. Without an output device it gets a silent
     /// one, so playback state still moves.
-    pub fn boxed(
-        cue: Cue,
-        volume: Volume,
-        spectrum: Spectrum,
-        changed: UnboundedSender<()>,
-    ) -> Box<dyn Sink> {
-        match Paced::open(cue.clone(), volume, spectrum, changed) {
+    pub fn boxed(cue: Cue, chain: Chain, changed: UnboundedSender<()>) -> Box<dyn Sink> {
+        match Paced::open(cue.clone(), chain, changed) {
             Ok(paced) => Box::new(Self { paced }),
             Err(error) => {
                 log::error!("sink: cannot open an output device: {error:#}");

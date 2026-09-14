@@ -196,15 +196,15 @@ impl Root {
         window
             .observe_window_appearance(|_, cx| {
                 let settings = Sonora::global(cx).settings.clone();
-                if ThemeKind::from_id(settings.read(cx).theme()) != ThemeKind::System {
-                    return;
-                }
                 let reported = ThemeKind::reported(cx);
-                if ThemeKind::assumed() == Some(reported) {
+                let changed = ThemeKind::assumed() != Some(reported);
+                if changed {
+                    ThemeKind::assume(reported);
+                    settings.update(cx, |settings, cx| settings.set_system_theme(reported, cx));
+                }
+                if ThemeKind::from_id(settings.read(cx).theme()) != ThemeKind::System || !changed {
                     return;
                 }
-                ThemeKind::assume(reported);
-                settings.update(cx, |settings, cx| settings.set_system_theme(reported, cx));
                 let settings = settings.read(cx);
                 let look = Look {
                     tint: cx.theme().tint,

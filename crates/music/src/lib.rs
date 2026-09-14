@@ -1,6 +1,7 @@
 mod audio;
 pub mod binimum;
 pub mod credentials;
+pub mod equalizer;
 pub mod kugou;
 #[cfg(test)]
 mod live_tests;
@@ -24,6 +25,7 @@ use std::time::Duration;
 use anyhow::Result;
 use async_trait::async_trait;
 
+pub use equalizer::Equalizer;
 pub use models::{
     Album, AlbumDetail, Artist, ArtistProfile, ArtistRef, Contributor, Credit, Genre, GenreDetail,
     GenreItem, GenreSection, HomeFeed, LibraryItem, LibraryItemKind, LibraryOrder,
@@ -200,12 +202,15 @@ pub trait LyricsProvider: Send + Sync {
     async fn search(&self, query: &LyricsQuery) -> Result<Vec<LyricsHit>>;
 }
 
-#[derive(Clone, Copy, Debug)]
+/// What an engine is started with. `equalizer` is shared rather than copied: the engine keeps
+/// reading it, so a change reaches the output without a restart.
+#[derive(Clone, Debug)]
 pub struct PlaybackConfig {
     pub normalisation: bool,
     pub gapless: bool,
     pub position_interval: Duration,
     pub gain: f32,
+    pub equalizer: Equalizer,
 }
 
 /// What an engine reports back. `Playing` and `Seeked` mean audio from `at` is reaching the

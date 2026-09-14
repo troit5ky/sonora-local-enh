@@ -37,19 +37,19 @@
         );
 
       release = {
-        version = "0.34.4";
+        version = "0.35.0";
         assets = {
           x86_64-linux = {
             target = "x86_64-unknown-linux-gnu";
-            hash = "sha256-sBtr/gryOBpDu95LsiguJPof8Ieq4l/2f8/z0vRGGtE=";
+            hash = "sha256-oEuHLhE+3xLIS3rZZc8O6pDLyfE/ec3IXe0oYRSw0ls=";
           };
           aarch64-linux = {
             target = "aarch64-unknown-linux-gnu";
-            hash = "sha256-n0fScf1WlozdCd+ek8iEBMEpTI85dke33ydwkz5UFv0=";
+            hash = "sha256-SX8aYABf7wgft57w7VdOUlfRvtHlv3U4b8H9G4ZX7Qo=";
           };
           aarch64-darwin = {
             target = "macos";
-            hash = "sha256-WhHVc926WOqVQnC48qEb5sA1VvHR9tZvR5DHjlN86zM=";
+            hash = "sha256-1jG5tXRL/ApDVEtkVvGr+L2JMGfA5sEDzsvhQcmyGV0=";
           };
         };
       };

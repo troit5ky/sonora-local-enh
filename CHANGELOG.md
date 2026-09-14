@@ -7,6 +7,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-09-14
+
+### Added
+
+- A ten band equalizer under Settings, Playback. Turn it on, pick a preset such as Bass boost or
+  Vocal, or drag the bands yourself; changes are heard as you make them, on every provider and on
+  local files alike.
+- A Hide fullscreen controls setting: Automatic fades the playback controls out while the pointer
+  is still, Always hidden keeps them away, and Always shown keeps them on screen.
+
+### Fixed
+
+- Some mp3 files remuxed by an old ffmpeg loaded fine and then played silence from start to end.
+  Their VBR header claims zero frames, and the gapless trim believed it; such files now play.
+- Switching the theme back to System picks up the light or dark mode the system is in now, even
+  if it changed while a fixed theme was selected.
+- On Linux under fractional scaling, a window whose size landed on half a device pixel showed a
+  thin strip of compositor blur along its right or bottom edge. Sonora now steps such a size down
+  by one pixel so the edge sits on the pixel grid.
+
 ## [0.34.4] - 2026-09-12
 
 ### Changed
@@ -1534,7 +1554,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/sonorahq/sonora/compare/v0.34.4...HEAD
+[unreleased]: https://github.com/sonorahq/sonora/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/sonorahq/sonora/compare/v0.34.4...v0.35.0
 [0.34.4]: https://github.com/sonorahq/sonora/compare/v0.34.3...v0.34.4
 [0.34.3]: https://github.com/sonorahq/sonora/compare/v0.34.2...v0.34.3
 [0.34.2]: https://github.com/sonorahq/sonora/compare/v0.34.1...v0.34.2

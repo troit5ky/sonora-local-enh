@@ -40,3 +40,13 @@ Deliberately **not** extended to `tags.rs` (the tag editor's read/write): fixing
 would mean writing a fresh one from scratch, discarding the old bytes entirely — real risk to a
 user's file for a case nobody's actually hit. An external tool (Mp3tag, Picard) does that safer than
 we can.
+
+## A lying Xing frame count (`wire::has_lying_xing_frame_count`)
+
+Some mp3s carry a Xing/Info VBR header with a declared frame count of `0` instead of omitting it —
+seen on files an old `ffmpeg`/`libavformat` (`Lavf54.20.4`) remuxed from a DASH/YouTube source,
+which never goes back to patch the real count into a non-seekable pipe output. `symphonia` trusts
+that count for gapless trimming: a declared `0` trims every packet in the track down to nothing, so
+the file loads with no error and then plays silence end to end even though the MPEG frames that
+follow decode fine. `playback::load` checks for this specific lie and turns gapless off only for a
+file that has it, so a well-formed file keeps its LAME encoder delay/padding trim.

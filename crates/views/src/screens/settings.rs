@@ -12,11 +12,12 @@ use gpui::{
 };
 use gpui::{ScrollHandle, prelude::*, svg};
 use i18n::{Language, t};
+use music::equalizer::{self, Preset};
 use music::{AccountChoice, SignIn, SignInPrompt, WritingSystem};
 use router::{NavEntry, Screen, SettingsTab};
 use state::{
-    AppSettings, DiscordName, Failure, Io, Playback, SYSTEM_FONT, Session, SessionState, Sleep,
-    Sonora,
+    AppSettings, DiscordName, Failure, FullscreenControlsAutohide, Io, Playback, SYSTEM_FONT,
+    Session, SessionState, Sleep, Sonora,
 };
 use ui::{ActiveTheme as _, Scrollbar, Scroller, eyebrow};
 use ui::{
@@ -34,6 +35,7 @@ const PACKS: &str = "packs";
 const CORNERS: &str = "corners";
 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "freebsd"))]
 const WINDOW_ROUNDING: &str = "window-rounding";
+const FULLSCREEN_CONTROLS_AUTOHIDE: &str = "fullscreen-controls-autohide";
 const LANGUAGES: &str = "languages";
 const TYPEFACES: &str = "typefaces";
 const TYPEFACE_LIMIT: usize = 200;
@@ -49,6 +51,9 @@ const MOTION: &str = "motion";
 const PACE: &str = "pace";
 const SAVER: &str = "saver";
 const SLEEP: &str = "sleep";
+const EQUALIZER_PRESETS: &str = "equalizer-presets";
+// the step a dragged band snaps to, in decibels
+const EQUALIZER_STEP: f32 = 0.5;
 const SLEEP_MAX_MINUTES: u64 = 120;
 const SLEEP_MAGNETS: [u64; 4] = [15, 30, 45, 60];
 const SLEEP_MAGNET_WEIGHT: usize = 4;
@@ -141,6 +146,8 @@ pub struct SettingsView {
     scrollbar: Entity<Scrollbar>,
     opacity: ScrubberState,
     sleep: ScrubberState,
+    /// One slider per equalizer band, lowest first.
+    bands: Vec<ScrubberState>,
     pending_sleep: Option<Option<Sleep>>,
     popovers: Popovers,
     server: Entity<Input>,
@@ -189,6 +196,9 @@ impl SettingsView {
             scrollbar: cx.new(|_| Scrollbar::new(ScrollHandle::new()).watching(me)),
             opacity: ScrubberState::new("opacity"),
             sleep: ScrubberState::new("sleep"),
+            bands: (0..equalizer::BANDS)
+                .map(|band| ScrubberState::new(format!("equalizer-band-{band}")))
+                .collect(),
             pending_sleep: None,
             popovers: Popovers::default(),
             server: cx.new(|cx| Input::new("login-server-hint", cx)),
@@ -233,6 +243,7 @@ impl SettingsView {
                 Row::Item(self.opacity_row(cx).into_any_element()),
                 Row::Item(self.blur_row(cx).into_any_element()),
                 Row::Item(self.corners_row(cx).into_any_element()),
+                Row::Item(self.fullscreen_controls_autohide_row(cx).into_any_element()),
                 self.title("settings-group-lyrics", cx),
                 Row::Item(self.panel_lyrics_size_row(cx).into_any_element()),
                 Row::Item(self.fullscreen_lyrics_size_row(cx).into_any_element()),
@@ -252,14 +263,25 @@ impl SettingsView {
                 Row::Item(self.adaptive_menu_row(cx).into_any_element()),
             ])
             .collect(),
-            SettingsTab::Playback => vec![
-                Row::Item(self.playback_row(cx).into_any_element()),
-                Row::Item(self.gapless_row(cx).into_any_element()),
-                Row::Item(self.sleep_row(cx).into_any_element()),
-                self.title("settings-group-lyrics", cx),
-                Row::Item(self.karaoke_lyrics_row(cx).into_any_element()),
-                Row::Item(self.romanized_lyrics_row(cx).into_any_element()),
-            ],
+            SettingsTab::Playback => {
+                let mut rows = vec![
+                    Row::Item(self.playback_row(cx).into_any_element()),
+                    Row::Item(self.gapless_row(cx).into_any_element()),
+                    Row::Item(self.sleep_row(cx).into_any_element()),
+                    self.title("settings-group-equalizer", cx),
+                    Row::Item(self.equalizer_row(cx).into_any_element()),
+                ];
+                if self.playback.read(cx).equalizer() {
+                    rows.push(Row::Item(self.equalizer_preset_row(cx).into_any_element()));
+                    rows.push(Row::Item(self.equalizer_bands_row(cx).into_any_element()));
+                }
+                rows.extend([
+                    self.title("settings-group-lyrics", cx),
+                    Row::Item(self.karaoke_lyrics_row(cx).into_any_element()),
+                    Row::Item(self.romanized_lyrics_row(cx).into_any_element()),
+                ]);
+                rows
+            }
             SettingsTab::Privacy => vec![
                 self.title("settings-group-lyrics", cx),
                 Row::Item(self.lyrics_for_local_files_row(cx).into_any_element()),
@@ -1103,6 +1125,38 @@ impl SettingsView {
         )
     }
 
+    fn fullscreen_controls_autohide_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let muted = theme.muted_foreground;
+        let small = theme.text(Text::Small);
+        let chosen = self.settings.read(cx).fullscreen_controls_autohide();
+
+        let picker = Picker::new(
+            FULLSCREEN_CONTROLS_AUTOHIDE,
+            &self.popovers,
+            i18n::lookup(chosen.key(), None),
+        )
+        .width(Picker::NARROW)
+        .items(FullscreenControlsAutohide::ALL.map(|fca| {
+            MenuItem::new(fca.id(), i18n::lookup(fca.key(), None))
+                .selected(fca == chosen)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.settings.update(cx, |settings, cx| {
+                        settings.set_fullscreen_controls_autohide(fca, cx)
+                    });
+                    cx.notify();
+                }))
+        }));
+
+        self.row(
+            t!("settings-fullscreen-controls-autohide"),
+            t!("settings-fullscreen-controls-autohide-detail"),
+            muted,
+            small,
+            picker.into_any_element(),
+        )
+    }
+
     fn motion_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
         let muted = theme.muted_foreground;
@@ -1263,6 +1317,115 @@ impl SettingsView {
                 }))
                 .into_any_element(),
         )
+    }
+
+    fn equalizer_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let muted = theme.muted_foreground;
+        let small = theme.text(Text::Small);
+        let on = self.playback.read(cx).equalizer();
+
+        self.row(
+            t!("settings-equalizer"),
+            t!("settings-equalizer-detail"),
+            muted,
+            small,
+            Switch::new("equalizer", on)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.playback
+                        .update(cx, |playback, cx| playback.set_equalizer(!on, cx));
+                }))
+                .into_any_element(),
+        )
+    }
+
+    /// The preset picker. It reads the current curve back, so a band moved by hand shows as
+    /// Custom and a curve that happens to match a preset shows that preset's name.
+    fn equalizer_preset_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let muted = theme.muted_foreground;
+        let small = theme.text(Text::Small);
+        let gains = self.playback.read(cx).equalizer_gains();
+        let chosen = Preset::matching(&gains);
+        let label = match chosen {
+            Some(preset) => i18n::lookup(preset_key(preset), None),
+            None => t!("settings-equalizer-custom"),
+        };
+
+        let picker = Picker::new(EQUALIZER_PRESETS, &self.popovers, label)
+            .width(Picker::NARROW)
+            .items(Preset::ALL.map(|preset| {
+                MenuItem::new(preset.id(), i18n::lookup(preset_key(preset), None))
+                    .selected(chosen == Some(preset))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.playback.update(cx, |playback, cx| {
+                            playback.set_equalizer_gains(&preset.gains(), cx)
+                        });
+                        cx.notify();
+                    }))
+            }));
+
+        self.row(
+            t!("settings-equalizer-preset"),
+            t!("settings-equalizer-preset-detail"),
+            muted,
+            small,
+            picker.into_any_element(),
+        )
+    }
+
+    /// One vertical slider per band with its gain above and its frequency below. Shown only
+    /// while the equalizer is on. Dragging writes straight through to the engines, so the
+    /// change is heard as it is made.
+    fn equalizer_bands_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let gains = self.playback.read(cx).equalizer_gains();
+        let span = equalizer::MAX_GAIN - equalizer::MIN_GAIN;
+
+        let columns = self.bands.iter().enumerate().map(|(band, state)| {
+            let gain = gains[band];
+            let fraction = (gain - equalizer::MIN_GAIN) / span;
+            let slider = Scrubber::new(state, fraction)
+                .vertical()
+                .colors(theme.progress_bar, theme.muted, theme.foreground)
+                .on_move(cx.listener(move |this, fraction: &f32, _, cx| {
+                    let raw = equalizer::MIN_GAIN + fraction * span;
+                    let gain = (raw / EQUALIZER_STEP).round() * EQUALIZER_STEP;
+                    this.playback.update(cx, |playback, cx| {
+                        playback.set_equalizer_gain(band, gain, cx)
+                    });
+                }));
+
+            div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .items_center()
+                .gap_2()
+                .child(
+                    div()
+                        .text_size(theme.text(Text::Tiny))
+                        .text_color(theme.muted_foreground)
+                        .whitespace_nowrap()
+                        .child(t!("settings-equalizer-decibels", db = decibels(gain))),
+                )
+                .child(
+                    div()
+                        .h(theme.metrics.cover)
+                        .flex()
+                        .justify_center()
+                        .child(slider),
+                )
+                .child(
+                    div()
+                        .text_size(theme.text(Text::Tiny))
+                        .text_color(theme.muted_foreground)
+                        .whitespace_nowrap()
+                        .child(hertz(equalizer::FREQUENCIES[band])),
+                )
+        });
+
+        div().flex().w_full().py_3().children(columns)
     }
 
     fn sleep_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -2510,5 +2673,41 @@ fn sleep_label(sleep: Option<Sleep>) -> SharedString {
         Some(Sleep::EndOfTrack) => t!("settings-sleep-end-of-track"),
         Some(Sleep::After(after)) => t!("settings-sleep-minutes", count = after.as_secs() / 60),
         None => t!("settings-sleep-off"),
+    }
+}
+
+fn preset_key(preset: Preset) -> &'static str {
+    match preset {
+        Preset::Flat => "settings-equalizer-flat",
+        Preset::BassBoost => "settings-equalizer-bass-boost",
+        Preset::BassReducer => "settings-equalizer-bass-reducer",
+        Preset::TrebleBoost => "settings-equalizer-treble-boost",
+        Preset::Vocal => "settings-equalizer-vocal",
+        Preset::Rock => "settings-equalizer-rock",
+        Preset::Pop => "settings-equalizer-pop",
+        Preset::Jazz => "settings-equalizer-jazz",
+        Preset::Classical => "settings-equalizer-classical",
+        Preset::Electronic => "settings-equalizer-electronic",
+        Preset::Acoustic => "settings-equalizer-acoustic",
+        Preset::Loudness => "settings-equalizer-loudness",
+    }
+}
+
+/// A band gain as the readout shows it: signed, with the decimal only when it is not zero.
+fn decibels(gain: f32) -> String {
+    match gain == 0. {
+        true => "0".to_owned(),
+        false => format!("{gain:+}"),
+    }
+}
+
+/// A band's centre frequency in hertz below a kilohertz and in kilohertz from there on.
+fn hertz(frequency: f32) -> SharedString {
+    match frequency >= 1_000. {
+        true => t!(
+            "settings-equalizer-kilohertz",
+            khz = (frequency / 1_000.).round() as i64
+        ),
+        false => t!("settings-equalizer-hertz", hz = frequency.round() as i64),
     }
 }

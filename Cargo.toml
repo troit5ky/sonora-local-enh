@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.34.4"
+version = "0.35.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/sonorahq/sonora"
@@ -34,8 +34,8 @@ env_logger = "0.11"
 fastrand = "2.5"
 futures = "0.3"
 fluent-bundle = "0.16"
-gpui = { git = "https://github.com/sonorahq/gpui", rev = "96ffcd35c2d1eaccb2a27dddf3de588476b72000" }
-gpui_platform = { git = "https://github.com/sonorahq/gpui", rev = "96ffcd35c2d1eaccb2a27dddf3de588476b72000", features = [
+gpui = { git = "https://github.com/sonorahq/gpui", rev = "770544dfcf70fdcf0b5c6e28edb58e2fa77a7e67" }
+gpui_platform = { git = "https://github.com/sonorahq/gpui", rev = "770544dfcf70fdcf0b5c6e28edb58e2fa77a7e67", features = [
   "font-kit",
   "wayland",
   "x11",

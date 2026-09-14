@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use rodio::Source as _;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
-use crate::audio::Volume;
+use crate::audio::{Chain, Volume};
 use crate::sink::{Cue, Paced, packet};
 use crate::spectrum::Spectrum;
 use crate::subsonic::client::SubsonicClient;
@@ -203,7 +203,11 @@ async fn engine_loop(
 ) {
     let (cue, mut written) = Cue::new();
     let (changed, mut gone) = unbounded_channel();
-    let volume = Volume::new(config.gain);
+    let chain = Chain {
+        volume: Volume::new(config.gain),
+        equalizer: config.equalizer.clone(),
+        spectrum,
+    };
     let (jobs, job_rx) = channel::<Job>();
 
     let audio_cue = cue.clone();
@@ -211,17 +215,7 @@ async fn engine_loop(
     let interval = config.position_interval;
     let spawned = std::thread::Builder::new()
         .name("subsonic-audio".to_owned())
-        .spawn(move || {
-            audio_loop(
-                job_rx,
-                audio_cue,
-                volume,
-                spectrum,
-                changed,
-                audio_events,
-                interval,
-            )
-        });
+        .spawn(move || audio_loop(job_rx, audio_cue, chain, changed, audio_events, interval));
     if let Err(error) = spawned {
         log::error!("playback: cannot spawn the subsonic audio thread: {error}");
         return;
@@ -522,13 +516,12 @@ struct Join {
 fn audio_loop(
     jobs: Receiver<Job>,
     cue: Cue,
-    volume: Volume,
-    spectrum: Spectrum,
+    chain: Chain,
     changed: UnboundedSender<()>,
     events: UnboundedSender<PlaybackEvent>,
     interval: Duration,
 ) {
-    let mut paced = match Paced::open(cue.clone(), volume, spectrum, changed) {
+    let mut paced = match Paced::open(cue.clone(), chain, changed) {
         Ok(paced) => paced,
         Err(error) => return log::error!("playback: cannot open audio output: {error:#}"),
     };

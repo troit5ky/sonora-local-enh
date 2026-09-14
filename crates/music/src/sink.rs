@@ -13,8 +13,7 @@ use rodio::buffer::SamplesBuffer;
 use rodio::{ChannelCount, SampleRate, Source};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 
-use crate::audio::{Output, Volume};
-use crate::spectrum::Spectrum;
+use crate::audio::{Chain, Output};
 
 /// How many packets stay queued before a write blocks. This is what paces the decoder to real
 /// time; deeper rides out network hiccups, but the decoder's position runs this far ahead of
@@ -214,13 +213,8 @@ pub struct Paced {
 
 impl Paced {
     /// Claims the default output device, paused until the caller starts it.
-    pub fn open(
-        cue: Cue,
-        volume: Volume,
-        spectrum: Spectrum,
-        changed: UnboundedSender<()>,
-    ) -> Result<Self> {
-        let output = Output::open(volume, spectrum)?;
+    pub fn open(cue: Cue, chain: Chain, changed: UnboundedSender<()>) -> Result<Self> {
+        let output = Output::open(chain)?;
         output.sink().pause();
 
         Ok(Self {
